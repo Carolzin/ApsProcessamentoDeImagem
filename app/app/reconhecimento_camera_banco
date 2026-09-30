@@ -1,0 +1,186 @@
+import cv2
+import json
+import numpy as np
+import mysql.connector
+from insightface.app import FaceAnalysis
+
+
+# =========================
+# CONEXÃO COM O BANCO
+# =========================
+
+conexao = mysql.connector.connect(
+    host="localhost",
+    user="root",
+    password="1234",
+    database="aps_biometria"
+)
+
+cursor = conexao.cursor(dictionary=True)
+
+
+# =========================
+# CARREGAR USUÁRIOS DO BANCO
+# =========================
+
+cursor.execute("""
+    SELECT id, nome, matricula, cargo, nivel_acesso, embedding
+    FROM usuarios
+""")
+
+usuarios = cursor.fetchall()
+
+if len(usuarios) == 0:
+    print("Nenhum usuário cadastrado.")
+    cursor.close()
+    conexao.close()
+    exit()
+
+print(f"{len(usuarios)} usuário(s) carregado(s) do banco.")
+
+
+# =========================
+# PREPARAR EMBEDDINGS
+# =========================
+
+cadastros = []
+
+for usuario in usuarios:
+    embedding = np.array(
+        json.loads(usuario["embedding"]),
+        dtype=np.float32
+    )
+
+    # Normalização
+    embedding = embedding / np.linalg.norm(embedding)
+
+    cadastros.append({
+        "nome": usuario["nome"],
+        "matricula": usuario["matricula"],
+        "cargo": usuario["cargo"],
+        "nivel_acesso": usuario["nivel_acesso"],
+        "embedding": embedding
+    })
+
+
+# =========================
+# INSIGHTFACE
+# =========================
+
+app = FaceAnalysis(name="buffalo_l")
+app.prepare(ctx_id=0, det_size=(640, 640))
+
+
+# =========================
+# CÂMERA
+# =========================
+
+camera = cv2.VideoCapture(0)
+
+print("Câmera iniciada.")
+print("Pressione Q para sair.")
+
+
+while True:
+
+    sucesso, frame = camera.read()
+
+    if not sucesso:
+        print("Erro ao acessar a câmera.")
+        break
+
+    faces = app.get(frame)
+
+    for face in faces:
+
+        # Embedding do rosto da câmera
+        embedding_camera = face.embedding.astype(np.float32)
+
+        # Normalização
+        embedding_camera = (
+            embedding_camera /
+            np.linalg.norm(embedding_camera)
+        )
+
+        melhor_usuario = None
+        menor_distancia = float("inf")
+
+        # Comparar com todos os usuários do banco
+        for usuario in cadastros:
+
+            distancia = np.linalg.norm(
+                embedding_camera - usuario["embedding"]
+            )
+
+            if distancia < menor_distancia:
+                menor_distancia = distancia
+                melhor_usuario = usuario
+
+        # =========================
+        # RESULTADO
+        # =========================
+
+        if menor_distancia < 1.0:
+
+            texto = (
+                f'{melhor_usuario["nome"]} - RECONHECIDA'
+            )
+
+            texto2 = (
+                f'Distancia: {menor_distancia:.2f} | '
+                f'Nivel: {melhor_usuario["nivel_acesso"]}'
+            )
+
+        else:
+
+            texto = "PESSOA NAO RECONHECIDA"
+
+            texto2 = (
+                f'Distancia: {menor_distancia:.2f}'
+            )
+
+        # =========================
+        # DESENHAR NA TELA
+        # =========================
+
+        x1, y1, x2, y2 = face.bbox.astype(int)
+
+        cv2.rectangle(
+            frame,
+            (x1, y1),
+            (x2, y2),
+            (0, 255, 0),
+            2
+        )
+
+        cv2.putText(
+            frame,
+            texto,
+            (x1, y1 - 30),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.7,
+            (0, 255, 0),
+            2
+        )
+
+        cv2.putText(
+            frame,
+            texto2,
+            (x1, y1 - 5),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.5,
+            (255, 255, 255),
+            1
+        )
+
+    cv2.imshow("Reconhecimento Facial - APS", frame)
+
+    if cv2.waitKey(1) & 0xFF == ord("q"):
+        break
+
+
+camera.release()
+cv2.destroyAllWindows()
+
+cursor.close()
+conexao.close()
