@@ -1,0 +1,78 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}BioSegura{% endblock %}</title>
+    <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='img/icon-biosegura.svg') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="app-container">
+        <aside class="sidebar">
+            <div class="brand">
+                <img
+                    src="{{ url_for('static', filename='img/logo-biosegura.svg') }}"
+                    alt="BioSegura"
+                    class="brand-logo"
+                >
+            </div>
+
+            <nav class="menu">
+                <a href="{{ url_for('dashboard') }}"
+                   class="{{ 'active' if request.endpoint == 'dashboard' else '' }}">
+                    <span>▦</span> Dashboard
+                </a>
+
+                <a href="{{ url_for('reconhecimento') }}"
+                   class="{{ 'active' if request.endpoint == 'reconhecimento' else '' }}">
+                    <span>◎</span> Reconhecimento Facial
+                </a>
+
+                <a href="{{ url_for('usuarios') }}"
+                class="{{ 'active' if request.endpoint == 'usuarios' else '' }}">
+                    <span>♙</span> Usuários
+                </a>
+
+                <a href="{{ url_for('controle_acesso') }}"
+                class="{{ 'active' if request.endpoint == 'controle_acesso' else '' }}">
+                    <span>⛨</span> Controle de Acesso
+                </a>
+
+                <a href="{{ url_for('historico') }}"
+                class="{{ 'active' if request.endpoint == 'historico' else '' }}">
+                    <span>◷</span> Histórico
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <center>Ministério do Meio Ambiente</center>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="topbar">
+                <div>
+                    <span class="institution">MINISTÉRIO DO MEIO AMBIENTE</span>
+                    <span class="system-status">
+                        <span class="status-dot"></span>
+                        Sistema local
+                    </span>
+                </div>
+            </header>
+
+            <section class="page-content">
+                <div class="page-heading">
+                    <div>
+                        <h1>{% block page_title %}Dashboard{% endblock %}</h1>
+                        <p>{% block page_description %}{% endblock %}</p>
+                    </div>
+                </div>
+
+                {% block content %}{% endblock %}
+            </section>
+        </main>
+    </div>
+</body>
+</html>

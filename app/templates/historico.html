@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+
+{% block title %}Histórico de Acessos | BioSegura{% endblock %}
+
+{% block page_title %}Histórico de Acessos{% endblock %}
+
+{% block page_description %}
+Consulte os registros reais das tentativas de acesso às áreas institucionais.
+{% endblock %}
+
+{% block content %}
+
+<section class="historico-page">
+
+    {% if erro %}
+
+        <div class="alerta-erro">
+            {{ erro }}
+        </div>
+
+    {% else %}
+
+        <div class="historico-resumo">
+            <div>
+                <span class="historico-resumo-label">Registros encontrados</span>
+                <strong>{{ tentativas|length }}</strong>
+                <small>Tentativas registradas no sistema</small>
+            </div>
+
+            <div class="historico-resumo-icone">◷</div>
+        </div>
+
+        <div class="historico-conteudo">
+
+            <div class="secao-introducao">
+                <div>
+                    <h2>Registros de acesso</h2>
+                    <p>
+                        Histórico de identificações e decisões de autorização
+                        realizadas pelo sistema.
+                    </p>
+                </div>
+            </div>
+
+            {% if tentativas %}
+
+                <div class="historico-tabela-container">
+
+                    <table class="historico-tabela">
+
+                        <thead>
+                            <tr>
+                                <th>Pessoa identificada</th>
+                                <th>Matrícula</th>
+                                <th>Área</th>
+                                <th>Data e horário</th>
+                                <th>Resultado</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+
+                            {% for tentativa in tentativas %}
+
+                                <tr>
+
+                                    <td>
+                                        <div class="historico-usuario">
+                                            <div class="historico-avatar">
+                                                {{ tentativa.nome[0]|upper if tentativa.nome else '?' }}
+                                            </div>
+
+                                            <strong>
+                                                {{ tentativa.nome or 'Não identificado' }}
+                                            </strong>
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        {{ tentativa.matricula or '—' }}
+                                    </td>
+
+                                    <td>
+                                        {{ tentativa.area or 'Não identificada' }}
+                                    </td>
+
+                                    <td>
+                                        <div class="historico-data">
+                                            {% if tentativa.data_hora %}
+                                                <strong>
+                                                    {{ tentativa.data_hora.strftime('%d/%m/%Y') }}
+                                                </strong>
+                                                <small>
+                                                    {{ tentativa.data_hora.strftime('%H:%M:%S') }}
+                                                </small>
+                                            {% else %}
+                                                —
+                                            {% endif %}
+                                        </div>
+                                    </td>
+
+                                    <td>
+                                        {% if tentativa.resultado == 'ACESSO PERMITIDO' %}
+
+                                            <span class="historico-status permitido">
+                                                <i></i>
+                                                Acesso permitido
+                                            </span>
+
+                                        {% else %}
+
+                                            <span class="historico-status negado">
+                                                <i></i>
+                                                Acesso negado
+                                            </span>
+
+                                        {% endif %}
+                                    </td>
+
+                                </tr>
+
+                            {% endfor %}
+
+                        </tbody>
+
+                    </table>
+
+                </div>
+
+            {% else %}
+
+                <div class="historico-vazio">
+                    <div class="historico-vazio-icone">◷</div>
+                    <h3>Nenhum registro encontrado</h3>
+                    <p>
+                        Ainda não existem tentativas de acesso registradas no sistema.
+                    </p>
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    {% endif %}
+
+</section>
+
+{% endblock %}

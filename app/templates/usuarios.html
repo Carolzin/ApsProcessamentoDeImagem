@@ -1,0 +1,359 @@
+
+{% extends "base.html" %}
+
+{% block title %}Usuários | BioSegura{% endblock %}
+
+{% block page_title %}Usuários{% endblock %}
+
+{% block page_description %}
+Gerenciamento de funcionários e cadastros biométricos.
+{% endblock %}
+
+{% block content %}
+
+{% if erro %}
+    <div class="error-message">{{ erro }}</div>
+{% endif %}
+
+<div class="usuarios-layout">
+
+    <!-- CABEÇALHO DO GERENCIAMENTO -->
+    <section class="usuarios-intro">
+
+        <div>
+            <span class="usuarios-eyebrow">GESTÃO DE PESSOAS</span>
+            <h2>Funcionários cadastrados</h2>
+            <p>
+                Consulte os usuários registrados e gerencie novos
+                cadastros biométricos do BioSegura.
+            </p>
+        </div>
+
+        <div class="usuarios-intro-icon">
+            <span>♙</span>
+        </div>
+
+    </section>
+
+    <!-- ABERTURA DO CADASTRO -->
+    <details class="cadastro-expansivel">
+
+        <summary class="cadastro-summary">
+            <span class="cadastro-summary-icon">＋</span>
+
+            <span class="cadastro-summary-text">
+                <strong>Cadastrar funcionário</strong>
+                <small>Adicionar uma pessoa e registrar sua biometria</small>
+            </span>
+
+            <span class="cadastro-summary-arrow">⌄</span>
+        </summary>
+
+        <section class="recognition-card usuarios-cadastro">
+
+            <div class="cadastro-section-heading">
+                <span class="cadastro-etapa">ETAPA 01</span>
+                <h2>Dados do funcionário</h2>
+                <p>
+                    Preencha as informações para criar a autorização
+                    de cadastramento.
+                </p>
+            </div>
+
+            <div id="formularioAutorizacao" class="cadastro-form-grid">
+
+                <div class="form-group">
+                    <label for="nomeCadastro">Nome completo</label>
+                    <input
+                        type="text"
+                        id="nomeCadastro"
+                        placeholder="Ex.: João da Silva"
+                        autocomplete="name"
+                        required>
+                </div>
+
+                <div class="form-group">
+                    <label for="matriculaCadastro">Matrícula</label>
+                    <input
+                        type="text"
+                        id="matriculaCadastro"
+                        placeholder="Digite a matrícula"
+                        autocomplete="off"
+                        required>
+                </div>
+
+                <div class="form-group">
+                    <label for="cargoCadastro">Cargo</label>
+                    <input
+                        type="text"
+                        id="cargoCadastro"
+                        placeholder="Ex.: Analista"
+                        required>
+                </div>
+
+                <div class="form-group">
+                    <label for="nivelCadastro">Nível de acesso</label>
+                    <select id="nivelCadastro" required>
+                        <option value="">Selecione o nível</option>
+                        <option value="1">Nível 1 — Área Geral</option>
+                        <option value="2">Nível 2 — Área dos Diretores</option>
+                        <option value="3">Nível 3 — Segurança Máxima</option>
+                    </select>
+                </div>
+
+                <div class="cadastro-form-action">
+                    <button
+                        type="button"
+                        class="btn-start"
+                        id="btnCriarAutorizacao">
+                        Criar autorização
+                        <span>→</span>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- CONFIRMAÇÃO DOS DADOS -->
+            <div
+                class="autorizacao-container"
+                id="dadosAutorizacao"
+                hidden>
+
+                <div class="cadastro-section-heading">
+                    <span class="cadastro-etapa">ETAPA 02</span>
+                    <h3>Confirme os dados</h3>
+                    <p>
+                        Confira as informações antes de realizar
+                        a captura biométrica.
+                    </p>
+                </div>
+
+                <div class="autorizacao-grid">
+
+                    <div class="autorizacao-item">
+                        <span>Nome completo</span>
+                        <strong id="nomeAutorizado">-</strong>
+                    </div>
+
+                    <div class="autorizacao-item">
+                        <span>Matrícula</span>
+                        <strong id="matriculaAutorizada">-</strong>
+                    </div>
+
+                    <div class="autorizacao-item">
+                        <span>Cargo</span>
+                        <strong id="cargoAutorizado">-</strong>
+                    </div>
+
+                    <div class="autorizacao-item">
+                        <span>Nível de acesso</span>
+                        <strong id="nivelAutorizado">-</strong>
+                    </div>
+
+                </div>
+
+                <label class="confirmacao-dados">
+                    <input type="checkbox" id="confirmarDados">
+                    <span>
+                        Confirmo que os dados apresentados estão corretos
+                        e correspondem à pessoa que será cadastrada.
+                    </span>
+                </label>
+
+            </div>
+
+            <!-- CAPTURA BIOMÉTRICA -->
+            <div class="cadastro-camera-section">
+
+                <div class="cadastro-section-heading">
+                    <span class="cadastro-etapa">ETAPA 03</span>
+                    <h3>Captura biométrica</h3>
+                    <p>
+                        Posicione o funcionário diante da câmera
+                        para registrar sua biometria facial.
+                    </p>
+                </div>
+
+                <div class="cadastro-camera-wrapper">
+
+                    <div class="camera-container">
+
+                        <video
+                            id="cameraCadastroVideo"
+                            autoplay
+                            muted
+                            playsinline>
+                        </video>
+
+                        <div
+                            class="camera-placeholder"
+                            id="cameraCadastroPlaceholder">
+
+                            <span>◎</span>
+                            <p>Câmera desligada</p>
+                            <small>
+                                Crie a autorização para liberar a captura.
+                            </small>
+
+                        </div>
+
+                    </div>
+
+                    <canvas id="cameraCadastroCanvas" hidden></canvas>
+
+                    <div class="cadastro-camera-info">
+                        <span class="camera-status-indicator"></span>
+                        Captura facial
+                    </div>
+
+                </div>
+
+                <div class="recognition-actions cadastro-botoes">
+
+                    <button
+                        type="button"
+                        class="btn-start"
+                        id="btnIniciarCameraCadastro"
+                        disabled>
+                        Iniciar câmera
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn-start"
+                        id="btnCapturarBiometria"
+                        disabled>
+                        Capturar e cadastrar
+                    </button>
+
+                    <button
+                        type="button"
+                        class="btn-stop"
+                        id="btnPararCameraCadastro"
+                        disabled>
+                        Encerrar câmera
+                    </button>
+
+                </div>
+
+                <p
+                    class="status-message"
+                    id="statusCadastroCamera"
+                    aria-live="polite">
+                    Preencha os dados para iniciar.
+                </p>
+
+                <div id="resultadoCadastro" aria-live="polite"></div>
+
+            </div>
+
+        </section>
+
+    </details>
+
+    <!-- LISTAGEM DE USUÁRIOS -->
+    <section class="recognition-card usuarios-lista">
+
+        <div class="usuarios-lista-header">
+
+            <div>
+                <span class="usuarios-eyebrow">BASE BIOMÉTRICA</span>
+                <h2>Todos os funcionários</h2>
+                <p>
+                    Pessoas com cadastro biométrico registrado no sistema.
+                </p>
+            </div>
+
+            <span class="usuarios-total">
+                {{ usuarios|length }} cadastrados
+            </span>
+
+        </div>
+
+        <div class="usuarios-filtro">
+
+            <span class="usuarios-search-icon">⌕</span>
+
+            <input
+                type="search"
+                id="buscaUsuarios"
+                placeholder="Pesquisar por nome ou matrícula..."
+                autocomplete="off">
+
+        </div>
+
+        <div class="table-container">
+
+            <table class="data-table" id="tabelaUsuarios">
+
+                <thead>
+                    <tr>
+                        <th>Funcionário</th>
+                        <th>Matrícula</th>
+                        <th>Cargo</th>
+                        <th>Nível de acesso</th>
+                        <th>Data de cadastro</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for usuario in usuarios %}
+
+                        <tr>
+                            <td class="usuario-nome">
+                                {{ usuario.nome }}
+                            </td>
+
+                            <td>{{ usuario.matricula }}</td>
+
+                            <td>{{ usuario.cargo }}</td>
+
+                            <td>
+                                <span class="nivel-badge">
+                                    Nível {{ usuario.nivel_acesso }}
+                                </span>
+                            </td>
+
+                            <td>
+                                {% if usuario.data_cadastro %}
+                                    {{ usuario.data_cadastro.strftime('%d/%m/%Y') }}
+                                {% else %}
+                                    -
+                                {% endif %}
+                            </td>
+                        </tr>
+
+                    {% else %}
+
+                        <tr>
+                            <td colspan="5" class="empty-table">
+                                Nenhum usuário cadastrado.
+                            </td>
+                        </tr>
+
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+            <p
+                id="usuariosSemResultado"
+                class="empty-table"
+                hidden>
+                Nenhum usuário encontrado na pesquisa.
+            </p>
+
+        </div>
+
+    </section>
+
+</div>
+
+<script
+    src="{{ url_for('static', filename='js/script.js') }}"
+    defer>
+</script>
+
+{% endblock %}

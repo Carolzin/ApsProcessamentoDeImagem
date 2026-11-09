@@ -1,0 +1,188 @@
+
+{% extends "base.html" %}
+
+{% block title %}Controle de Acesso | BioSegura{% endblock %}
+
+{% block page_title %}Controle de Acesso{% endblock %}
+
+{% block page_description %}
+Gerenciamento de permissões e níveis de acesso às áreas institucionais.
+{% endblock %}
+
+{% block content %}
+
+<section class="controle-acesso-page">
+
+    {% if erro %}
+        <div class="alerta-erro">
+            {{ erro }}
+        </div>
+    {% else %}
+
+        <div class="secao-introducao">
+            <div>
+                <h2>Áreas protegidas</h2>
+                <p>
+                    Consulte os níveis mínimos exigidos e a quantidade
+                    de usuários autorizados para cada área.
+                </p>
+            </div>
+        </div>
+
+        <div class="areas-acesso-grid">
+
+            {% for area in areas %}
+                <article class="area-acesso-card">
+
+                    <div class="area-acesso-topo">
+                        <div class="area-acesso-icone">
+                            {% if area.nivel_minimo == 1 %}
+                                ◈
+                            {% elif area.nivel_minimo == 2 %}
+                                ◉
+                            {% else %}
+                                ◆
+                            {% endif %}
+                        </div>
+
+                        <span class="area-nivel">
+                            Nível {{ area.nivel_minimo }}
+                        </span>
+                    </div>
+
+                    <h3>{{ area.nome }}</h3>
+
+                    <div class="area-acesso-total">
+                        <strong>{{ area.total_aptos }}</strong>
+                        <span>
+                            de {{ usuarios|length }} usuários aptos
+                        </span>
+                    </div>
+
+                    <div class="area-acesso-barra">
+                        <div
+                            class="area-acesso-progresso"
+                            style="width: {{ (area.total_aptos / usuarios|length * 100) if usuarios|length else 0 }}%;">
+                        </div>
+                    </div>
+
+                    <p class="area-acesso-descricao">
+                        {% if area.total_aptos == 1 %}
+                            1 usuário atende ao nível mínimo exigido.
+                        {% else %}
+                            {{ area.total_aptos }} usuários atendem ao nível mínimo exigido.
+                        {% endif %}
+                    </p>
+
+                </article>
+            {% else %}
+                <p class="estado-vazio">
+                    Nenhuma área cadastrada no sistema.
+                </p>
+            {% endfor %}
+
+        </div>
+
+        <div class="secao-usuarios-acesso">
+
+            <div class="secao-introducao">
+                <div>
+                    <h2>Permissões dos usuários</h2>
+                    <p>
+                        Visualize as áreas que cada usuário pode acessar
+                        conforme seu nível de autorização.
+                    </p>
+                </div>
+
+                <div class="total-usuarios-acesso">
+                    {{ usuarios|length }} usuários cadastrados
+                </div>
+            </div>
+
+            {% if usuarios %}
+
+                <div class="tabela-acesso-container">
+                    <table class="tabela-acesso">
+
+                        <thead>
+                            <tr>
+                                <th>Usuário</th>
+                                <th>Matrícula</th>
+                                <th>Cargo</th>
+                                <th>Nível</th>
+                                <th>Permissões</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for usuario in usuarios %}
+                                <tr>
+                                    <td>
+                                        <div class="usuario-acesso-identificacao">
+                                            <div class="usuario-acesso-avatar">
+                                                {{ usuario.nome[0]|upper }}
+                                            </div>
+
+                                            <strong>{{ usuario.nome }}</strong>
+                                        </div>
+                                    </td>
+
+                                    <td>{{ usuario.matricula }}</td>
+
+                                    <td>{{ usuario.cargo }}</td>
+
+                                    <td>
+                                        <span class="nivel-usuario">
+                                            Nível {{ usuario.nivel_acesso }}
+                                        </span>
+                                    </td>
+
+                                    <td>
+                                        <div class="permissoes-usuario">
+                                            {% for area in areas %}
+                                                {% if usuario.nivel_acesso >= area.nivel_minimo %}
+                                                    <span class="permissao-liberada">
+                                                        {{ area.nome }}
+                                                    </span>
+                                                {% else %}
+                                                    <span class="permissao-negada">
+                                                        {{ area.nome }}
+                                                    </span>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+
+                    </table>
+                </div>
+
+            {% else %}
+
+                <div class="estado-vazio">
+                    Nenhum usuário cadastrado no sistema.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+        <div class="legenda-permissoes">
+            <span>
+                <i class="legenda-indicador liberado"></i>
+                Acesso permitido
+            </span>
+
+            <span>
+                <i class="legenda-indicador negado"></i>
+                Acesso não permitido
+            </span>
+        </div>
+
+    {% endif %}
+
+</section>
+
+{% endblock %}

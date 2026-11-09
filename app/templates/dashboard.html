@@ -1,0 +1,98 @@
+
+{% extends "base.html" %}
+
+{% block title %}Dashboard | BioSegura{% endblock %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block page_description %}
+Visão geral do sistema de controle de acesso biométrico.
+{% endblock %}
+
+{% block content %}
+
+{% if erro %}
+<div class="content-card">
+    <h2>Não foi possível carregar os indicadores</h2>
+    <p>{{ erro }}</p>
+</div>
+{% else %}
+
+<div class="dashboard-grid">
+
+    <div class="metric-card">
+        <h3>Usuários cadastrados</h3>
+        <strong>{{ metricas.usuarios }}</strong>
+    </div>
+
+    <div class="metric-card">
+        <h3>Matrículas autorizadas</h3>
+        <strong>{{ metricas.matriculas_total }}</strong>
+        <p>{{ metricas.matriculas_disponiveis }} disponíveis</p>
+    </div>
+
+    <div class="metric-card">
+        <h3>Matrículas utilizadas</h3>
+        <strong>{{ metricas.matriculas_utilizadas }}</strong>
+    </div>
+
+    <div class="metric-card">
+        <h3>Tentativas de acesso</h3>
+        <strong>{{ metricas.tentativas }}</strong>
+    </div>
+
+    <div class="metric-card">
+        <h3>Acessos permitidos</h3>
+        <strong>{{ metricas.permitidos }}</strong>
+    </div>
+
+    <div class="metric-card">
+        <h3>Acessos negados</h3>
+        <strong>{{ metricas.negados }}</strong>
+    </div>
+
+</div>
+
+<div class="content-card">
+    <h2>Últimas tentativas de acesso</h2>
+
+    {% if recentes %}
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Identificação</th>
+                    <th>Matrícula</th>
+                    <th>Área</th>
+                    <th>Data e hora</th>
+                    <th>Resultado</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for tentativa in recentes %}
+                <tr>
+                    <td>{{ tentativa.nome_identificado or 'Não identificado' }}</td>
+                    <td>{{ tentativa.matricula or '—' }}</td>
+                    <td>{{ tentativa.area or 'Não informada' }}</td>
+                    <td>{{ tentativa.data_hora }}</td>
+                    <td>
+                        {% if tentativa.resultado == 'ACESSO PERMITIDO' %}
+                            <span class="result-allowed">ACESSO PERMITIDO</span>
+                        {% else %}
+                            <span class="result-denied">ACESSO NEGADO</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+        <p>Nenhuma tentativa de acesso registrada.</p>
+    {% endif %}
+</div>
+
+{% endif %}
+
+{% endblock %}

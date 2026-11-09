@@ -1,0 +1,104 @@
+
+{% extends "base.html" %}
+
+{% block title %}Reconhecimento Facial | BioSegura{% endblock %}
+
+{% block page_title %}Reconhecimento Facial{% endblock %}
+
+{% block page_description %}
+Identificação biométrica para controle de acesso às áreas restritas.
+{% endblock %}
+
+{% block content %}
+
+{% if erro %}
+    <div class="error-message">
+        {{ erro }}
+    </div>
+{% endif %}
+
+<div class="recognition-layout">
+
+    <section class="recognition-card">
+        <h2>Captura de imagem</h2>
+
+        <div class="camera-container">
+            <video
+                id="cameraVideo"
+                autoplay
+                muted
+                playsinline>
+            </video>
+
+            <div class="camera-placeholder" id="cameraPlaceholder">
+                <span>◎</span>
+                <p>A câmera está desligada.</p>
+                <p>Inicie a câmera para realizar o reconhecimento.</p>
+            </div>
+        </div>
+
+        <canvas id="cameraCanvas" hidden></canvas>
+
+        <div class="recognition-actions">
+            <button
+                type="button"
+                class="btn-start"
+                id="btnIniciarCamera">
+                Iniciar câmera
+            </button>
+
+            <button
+                type="button"
+                class="btn-stop"
+                id="btnPararCamera"
+                disabled>
+                Encerrar câmera
+            </button>
+        </div>
+
+        <p
+            class="status-message"
+            id="statusReconhecimento"
+            aria-live="polite">
+            Selecione uma área e inicie a câmera.
+        </p>
+    </section>
+
+    <section class="recognition-card">
+        <h2>Configuração do acesso</h2>
+
+        <label for="areaId">Área de acesso</label>
+
+        <select
+            class="area-select"
+            id="areaId"
+            name="area_id"
+            required>
+
+            <option value="">Selecione uma área</option>
+
+            {% for area in areas %}
+                <option value="{{ area.id }}">
+                    {{ area.nome }}
+                </option>
+            {% endfor %}
+
+        </select>
+
+        <h2>Resultado do reconhecimento</h2>
+
+        <div id="resultadoReconhecimento" aria-live="polite">
+            <p class="status-message">
+                Nenhum reconhecimento realizado.
+            </p>
+        </div>
+    </section>
+
+</div>
+
+<script
+    src="{{ url_for('static', filename='js/script.js') }}"
+    defer>
+</script>
+
+{% endblock %}

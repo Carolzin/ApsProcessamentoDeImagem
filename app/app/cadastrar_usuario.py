@@ -4,6 +4,8 @@ import cv2
 import numpy as np
 import mysql.connector
 from insightface.app import FaceAnalysis
+import threading
+from app.integracao.banco import conectar_banco as conectar_banco_web
 
 
 def conectar_banco():
@@ -263,6 +265,279 @@ def cadastrar_usuario():
         if conexao is not None and conexao.is_connected():
             conexao.close()
 
+# ==========================================================
+# INTEGRAÇÃO DO CADASTRO COM A INTERFACE WEB
+# ==========================================================
+
+_modelo_web = None
+_lock_modelo_web = threading.Lock()
+
+
+def carregar_modelo_web():
+    """Reutiliza o modelo buffalo_l durante a execução web."""
+
+    global _modelo_web
+
+    with _lock_modelo_web:
+        if _modelo_web is None:
+            _modelo_web = FaceAnalysis(name="buffalo_l")
+            _modelo_web.prepare(ctx_id=0, det_size=(640, 640))
+
+    return _modelo_web
+
+
+def listar_matriculas_disponiveis():
+    """Lista as autorizações ainda não utilizadas."""
+
+    conexao = conectar_banco_web()
+    cursor = conexao.cursor(dictionary=True)
+
+    try:
+        cursor.execute("""
+            SELECT matricula, nome_autorizado, cargo, nivel_acesso
+            FROM matriculas_autorizadas
+            WHERE utilizada = FALSE
+            ORDER BY nome_autorizado
+        """)
+
+        return cursor.fetchall()
+
+    finally:
+        cursor.close()
+        conexao.close()
+
+
+def consultar_matricula_disponivel(matricula):
+    """Consulta os dados de uma matrícula autorizada."""
+
+    matricula = matricula.strip().upper()
+
+    conexao = conectar_banco_web()
+    cursor = conexao.cursor(dictionary=True)
+
+    try:
+        cursor.execute("""
+            SELECT matricula, nome_autorizado, cargo, nivel_acesso
+            FROM matriculas_autorizadas
+            WHERE matricula = %s AND utilizada = FALSE
+        """, (matricula,))
+
+        return cursor.fetchone()
+
+    finally:
+        cursor.close()
+        conexao.close()
+
+
+def gerar_embedding_web(frame):
+    """Gera a biometria a partir de um frame enviado pelo navegador."""
+
+    if frame is None or frame.size == 0:
+        raise ValueError("Imagem inválida.")
+
+    modelo = carregar_modelo_web()
+    faces = modelo.get(frame)
+
+    if len(faces) == 0:
+        raise ValueError("Nenhum rosto encontrado. Tente novamente.")
+
+    if len(faces) > 1:
+        raise ValueError(
+            "Mais de um rosto encontrado. "
+            "Deixe apenas uma pessoa na imagem."
+        )
+
+    vetor = faces[0].embedding.astype(np.float32)
+    norma = np.linalg.norm(vetor)
+
+    if norma == 0:
+        raise ValueError("Erro ao gerar a biometria.")
+
+    return vetor / norma
+
+
+def cadastrar_usuario_web(matricula, frame, confirmar_dados=False):
+    """Realiza o cadastro biométrico solicitado pela interface web."""
+
+    matricula = matricula.strip().upper()
+
+    if not matricula:
+        raise ValueError("Informe a matrícula.")
+
+    if confirmar_dados is not True:
+        raise ValueError("Confirme os dados da autorização.")
+
+    autorizacao = consultar_matricula_disponivel(matricula)
+
+    if autorizacao is None:
+        raise ValueError(
+            "Matrícula inexistente ou autorização já utilizada."
+        )
+
+    embedding = gerar_embedding_web(frame)
+
+    conexao = None
+    cursor = None
+
+    try:
+        conexao = conectar_banco_web()
+        cursor = conexao.cursor()
+
+        cursor.execute("""
+            SELECT nome_autorizado, cargo, nivel_acesso
+            FROM matriculas_autorizadas
+            WHERE matricula = %s AND utilizada = FALSE
+            FOR UPDATE
+        """, (matricula,))
+
+        autorizacao_atual = cursor.fetchone()
+
+        if autorizacao_atual is None:
+            raise ValueError(
+                "A autorização foi utilizada ou deixou de estar disponível."
+            )
+
+        nome, cargo, nivel_acesso = autorizacao_atual
+
+        cursor.execute("""
+            SELECT id
+            FROM usuarios
+            WHERE matricula = %s
+        """, (matricula,))
+
+        if cursor.fetchone() is not None:
+            raise ValueError(
+                "Essa matrícula já possui biometria cadastrada."
+            )
+
+        cursor.execute("""
+            INSERT INTO usuarios
+                (nome, matricula, cargo, nivel_acesso, embedding)
+            VALUES (%s, %s, %s, %s, %s)
+        """, (
+            nome,
+            matricula,
+            cargo,
+            nivel_acesso,
+            json.dumps(embedding.tolist())
+        ))
+
+        cursor.execute("""
+            UPDATE matriculas_autorizadas
+            SET utilizada = TRUE
+            WHERE matricula = %s AND utilizada = FALSE
+        """, (matricula,))
+
+        if cursor.rowcount != 1:
+            raise mysql.connector.Error(
+                "Não foi possível confirmar o uso da autorização."
+            )
+
+        conexao.commit()
+
+        return {
+            "nome": nome,
+            "matricula": matricula,
+            "cargo": cargo,
+            "nivel_acesso": nivel_acesso
+        }
+
+    except Exception:
+        if conexao is not None and conexao.is_connected():
+            conexao.rollback()
+
+        raise
+
+    finally:
+        if cursor is not None:
+            cursor.close()
+
+        if conexao is not None and conexao.is_connected():
+            conexao.close()
+
+def criar_autorizacao_web(nome, matricula, cargo, nivel_acesso):
+    """Registra uma nova autorização para cadastro biométrico."""
+
+    nome = nome.strip()
+    matricula = matricula.strip().upper()
+    cargo = cargo.strip()
+
+    if not nome or not matricula or not cargo:
+        raise ValueError(
+            "Nome, matrícula e cargo são obrigatórios."
+        )
+
+    try:
+        nivel_acesso = int(nivel_acesso)
+    except (ValueError, TypeError):
+        raise ValueError("Nível de acesso inválido.")
+
+    if nivel_acesso not in (1, 2, 3):
+        raise ValueError(
+            "O nível de acesso deve ser 1, 2 ou 3."
+        )
+
+    conexao = None
+    cursor = None
+
+    try:
+        conexao = conectar_banco_web()
+        cursor = conexao.cursor()
+
+        cursor.execute("""
+            SELECT matricula
+            FROM matriculas_autorizadas
+            WHERE matricula = %s
+        """, (matricula,))
+
+        if cursor.fetchone() is not None:
+            raise ValueError(
+                "Essa matrícula já possui uma autorização cadastrada."
+            )
+
+        cursor.execute("""
+            SELECT matricula
+            FROM usuarios
+            WHERE matricula = %s
+        """, (matricula,))
+
+        if cursor.fetchone() is not None:
+            raise ValueError(
+                "Essa matrícula já possui usuário cadastrado."
+            )
+
+        cursor.execute("""
+            INSERT INTO matriculas_autorizadas
+                (matricula, nome_autorizado, cargo, nivel_acesso, utilizada)
+            VALUES (%s, %s, %s, %s, FALSE)
+        """, (
+            matricula,
+            nome,
+            cargo,
+            nivel_acesso
+        ))
+
+        conexao.commit()
+
+        return {
+            "nome_autorizado": nome,
+            "matricula": matricula,
+            "cargo": cargo,
+            "nivel_acesso": nivel_acesso
+        }
+
+    except Exception:
+        if conexao is not None and conexao.is_connected():
+            conexao.rollback()
+
+        raise
+
+    finally:
+        if cursor is not None:
+            cursor.close()
+
+        if conexao is not None and conexao.is_connected():
+            conexao.close()
 
 if __name__ == "__main__":
     cadastrar_usuario()
